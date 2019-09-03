@@ -127,7 +127,6 @@ async function addTask(issue) {
 		}
 	}
 	else {
-		// noinspection JSUndeclaredVariable
 		epicLink = getEpicLink(issue);
 		if (epicLink) {
 			epic = await addEpic(epicLink);
