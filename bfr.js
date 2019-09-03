@@ -213,14 +213,14 @@ function buildCSVLine(issueKey, issue, epicRendered, epicKey, epic) {
 	}
 	return {
 		"epic" : epicLine,
-		"feature" : "[" + getType(issue) +"] → " + sanitize(getSummary(issue)) + "",
+		"feature" : "[" + issue.fields.type +"] → " + sanitize(issue.fields.summary) + "",
 		"LPS" : issueKey,
-		"status": getStatus(issue),
+		"status": issue.fields.status,
 		"subtasks" : Object.keys(issue).reduce( (total, k, i, a) => {
 			if (k == "fields") {
 				return total;
 			}
-			return total + k + "(" + getStatus(issue[k]) + ")" + ((i == a.length -1) ? "" : ":");
+			return total + k + "(" + issue[k].fields.status + ")" + ((i == a.length -1) ? "" : ":");
 		}, "")
 	};
 }
