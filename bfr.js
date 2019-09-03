@@ -22,6 +22,7 @@ var epics = new Object(); // stories grouped by epic
 var stories = new Object() ; // stories w/o associated epic
 var tasks = new Object(); // tech tasks not associated to stories nor epics
 var resultCache = []; // all issues as returned by JIRA REST API
+var gitHistoryIndex = {} // all git history
 
 /* get some data from json objects returned by JIRA REST API */
 function buildIssueKey(issue) {	return issue.key + ': ' + issue.fields.summary; }
@@ -161,14 +162,40 @@ async function addIssue(issue) {
 	}
 }
 
-function isTicketinHistory(issue) {
-	command = "git log --oneline " + jiraProps.get('branch.ref.from') + ".." +
-			  jiraProps.get('branch.ref.to') + " | grep " + issue.key;
+function cacheGitHistory(){
+	filterOptions = "| sed 's/.*/\\U&/' | sort | uniq | grep -v SUBREPO:IGNORE | grep -v ARTIFACT:IGNORE | grep -v \"RECORD REFERENCE TO LIFERAY-PORTAL\""
+	commitRange = jiraProps.get('branch.ref.from') + ".." + jiraProps.get('branch.ref.to')
+	command = "git log --format=%s " + commitRange + filterOptions;
 	try {
 		stdout = exec(command);
-		return (stdout.length != 0);
+		outArray = stdout.toString().split("\n")
+
+		for (const line of outArray) {
+			trimmed=line.trim();
+			index = trimmed.substring(0, trimmed.indexOf(" "));
+			if (!gitHistoryIndex[index]) {
+				gitHistoryIndex[index] = trimmed
+			}
+			else {
+				gitHistoryIndex[index] = gitHistoryIndex[index] + " " + trimmed
+			}
+		}
 	}
 	catch(err) {
+		console.log(err)
+	}
+}
+
+function isTicketinCachedHistory(issue) {
+	if (gitHistoryIndex[issue.key]) {
+		return true;
+	}
+	else {
+		for (k of Object.keys(gitHistoryIndex)) {
+			if (gitHistoryIndex[k].toString().indexOf(issue.key) != -1) {
+				return true;
+			}
+		}
 	}
 	return false;
 }
@@ -232,38 +259,47 @@ function printJSON(data) {
 async function getTickets() {
 	try {
 		console.log("Querying JIRA: " + jiraProps.get('jira.query'));
-		const issues = await jira.searchJira(jiraProps.get('jira.query'), {maxResults:500})
+		const issues = await jira.searchJira(
+				jiraProps.get('jira.query'), {maxResults: 500})
 
 		console.log("Caching " + issues.issues.length + " issues")
 		for (let index = 0; index < issues.issues.length; index++) {
 			cacheIssue(issues.issues[index])
 		}
 
-		for (const branch of ["public","private"]) {
-			console.log("Processing " + jiraProps.get('branch.name.' + branch) + "@"+ jiraProps.get('branch.dir.' + branch));
+		for (const branch of ["public", "private"]) {
+			console.log("Processing " + jiraProps.get('branch.name.' + branch) +
+						"@" + jiraProps.get('branch.dir.' + branch));
 
-			process.chdir(jiraProps.get('branch.dir.'+branch));
+			process.chdir(jiraProps.get('branch.dir.' + branch));
+			cacheGitHistory();
 			if (jiraProps.get('branch.sync')) {
-				console.log("Checking out " + jiraProps.get('branch.name.'+branch))
-				await exec("git checkout " + jiraProps.get('branch.name.'+branch))
-				console.log("Pulling " + jiraProps.get('branch.name.'+branch) + " from upstream")
-				await exec("git pull upstream " + jiraProps.get('branch.name.'+branch))
+				console.log("Checking out " +
+							jiraProps.get('branch.name.' + branch))
+				await exec("git checkout " +
+						   jiraProps.get('branch.name.' + branch))
+				console.log(
+						"Pulling " + jiraProps.get('branch.name.' + branch) +
+						" from upstream")
+				await exec("git pull upstream " +
+						   jiraProps.get('branch.name.' + branch))
 			}
-
-			console.log("Building feature tree from git history");
-			issueCount = 0;
-			for (let index = 0; index < issues.issues.length; index++) {
-				char = '-'
-				if (isTicketinHistory(issues.issues[index])) {
-					char="·" //
-					issueCount++;
-					await addIssue(issues.issues[index])
-				}
-				process.stdout.write(char)
-			}
-			console.log()
-			console.log(issueCount + " out of " + issues.issues.length + " issues were found in git")
 		}
+
+		console.log("Building feature tree from git history");
+		issueCount = 0;
+		for (let index = 0; index < issues.issues.length; index++) {
+			char = '·'
+			if (isTicketinCachedHistory(issues.issues[index])) {
+				char = "*"
+				issueCount++;
+				await addIssue(issues.issues[index])
+			}
+			process.stdout.write(char)
+		}
+		console.log()
+		console.log(issueCount + " out of " + issues.issues.length +
+						" issues were found in git")
 
 		var all = new Object();
 		all["EPICS"]=epics;
