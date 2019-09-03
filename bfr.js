@@ -196,7 +196,7 @@ function logCSVLine(csvLine) {
 function buildCSVLine(issueKey, issue, epicRendered, epicKey, epic) {
 	epicLine = "none";
 	if (epicKey && epic) {
-		epicLine = epicRendered ? "" : (epicKey + ": " + sanitize(getSummary(epic)));
+		epicLine = epicRendered ? "" : (epicKey + "("+ getStatus(epic) + "): " + sanitize(getSummary(epic)));
 	}
 	return {
 		"epic" : epicLine,
