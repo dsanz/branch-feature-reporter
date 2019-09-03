@@ -16,9 +16,10 @@ var jira = new JiraApi({
 	strictSSL: true
 });
 
-var epics = {}; // stories grouped by epic
-var stories = {}; // stories w/o associated epic
-var tasks = {}; // tech tasks not associated to stories nor epics
+var features = {}; // hierarchical grouping of epics, stories, tasks and subtasks foind in git history
+features.epics={};   // tree of epics → stories → tasks → subtasks
+features.stories={}; // tree of stories → tasks → subtasks (stories w/o associated epic)
+features.tasks={};   // tree of tasks → subtasks (tech tasks not associated to stories nor epics)
 var resultCache = []; // all issues as returned by JIRA REST API
 var gitHistoryIndex = {}; // all git history
 
@@ -71,17 +72,17 @@ async function getParentIssue(issue) {
 async function addEpic(epicLink) { 
 	//console.log("Adding epic " + issue)
 	try {
-		if (!epics[epicLink]) {
-			epics[epicLink] = new Object();	// let add a placeholder just in case
+		if (!features.epics[epicLink]) {
+			features.epics[epicLink] = new Object();	// let add a placeholder just in case
 			// epic may have been left out by the jira query. Fetch it
 			const epic = await findAndCacheIssue(epicLink);
-			epics[epicLink] = convert(epic)
+			features.epics[epicLink] = convert(epic)
 		}
 	}
 	catch (err) {
 		console.error(err)
 	}
-	return epics[epicLink];
+	return features.epics[epicLink];
 }
 
 async function addStory(issue) {
@@ -92,7 +93,7 @@ async function addStory(issue) {
 		placeholder = await addEpic(epicLink);
 	}
 	else {
-		placeholder = stories;
+		placeholder = features.stories;
 	}
 	if (!placeholder[issue.key]) {
 		placeholder[issue.key] = convert(issue)
@@ -123,7 +124,7 @@ async function addTask(issue) {
 			placeholder = await addEpic(epicLink);
 		}
 		else {
-			placeholder = tasks;
+			placeholder = features.tasks;
 		}
 	}
 	if (!placeholder[issue.key]) {
@@ -213,11 +214,9 @@ function buildCSVLine(issueKey, issue, epicRendered, epicKey, epic) {
 }
 
 function printCSV(data) {
-	epics = data["EPICS"];
-
 	console.log("Epic\tElement/Feaure\tLPS\tStatus\tSubtasks");
-	for (epicKey in epics) {
-		epic = epics[epicKey];
+	for (epicKey in features.epics) {
+		epic = features.epics[epicKey];
 		epicRendered = false;
 		for (issueKey in epic) {
 			if (issueKey == "fields") { continue; }
@@ -227,19 +226,17 @@ function printCSV(data) {
 		}
 	}
 
-	stories = data["STORIES W/O EPIC"];
-	for (storyKey in stories) {
-		logCSVLine(buildCSVLine(storyKey, stories[storyKey]));
+	for (storyKey in features.stories) {
+		logCSVLine(buildCSVLine(storyKey, features.stories[storyKey]));
 	}
 
-	tasks = data["TASKS W/O STORY"];
-	for (taskKey in tasks) {
-		logCSVLine(buildCSVLine(taskKey, tasks[taskKey]));
+	for (taskKey in features.tasks) {
+		logCSVLine(buildCSVLine(taskKey, features.tasks[taskKey]));
 	}
 }
 
-function printJSON(data) {
-	console.log(util.inspect(data, {showHidden: false, depth:null, colors:true, sorted:true, compact:false, breakLength:Infinity}));
+function printJSON() {
+	console.log(util.inspect(features, {showHidden: false, depth:null, colors:true, sorted:true, compact:false, breakLength:Infinity}));
 }
 
 async function getTickets() {
@@ -287,10 +284,6 @@ async function getTickets() {
 		console.log(issueCount + " out of " + issues.issues.length +
 						" issues were found in git");
 
-		var all = new Object();
-		all["EPICS"]=epics;
-		all["STORIES W/O EPIC"]=stories;
-		all["TASKS W/O STORY"]=tasks;
 		process.chdir(process.env.PWD);
 		return all;
 	}
@@ -301,9 +294,9 @@ async function getTickets() {
 
 async function run() {
 	try {
-		var tickets = await getTickets();
-		printJSON(tickets);
-		printCSV(tickets)
+		await getTickets();
+		printJSON();
+		printCSV()
 	}
 	catch (err) {
 		console.log(err);
