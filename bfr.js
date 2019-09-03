@@ -285,7 +285,6 @@ async function getTickets() {
 						" issues were found in git");
 
 		process.chdir(process.env.PWD);
-		return all;
 	}
 	catch (err) {
 		console.log(err);
