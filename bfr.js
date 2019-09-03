@@ -3,7 +3,6 @@ const util = require('util');
 const process = require('process');
 const exec = require('child_process').execSync;
 const PropertiesReader = require('properties-reader');
-//const mod = require('./mod');
 
 const jiraProps = PropertiesReader('jira.properties');
 
@@ -17,12 +16,11 @@ var jira = new JiraApi({
 	strictSSL: true
 });
 
-
-var epics = new Object(); // stories grouped by epic
-var stories = new Object() ; // stories w/o associated epic
-var tasks = new Object(); // tech tasks not associated to stories nor epics
+var epics = {}; // stories grouped by epic
+var stories = {}; // stories w/o associated epic
+var tasks = {}; // tech tasks not associated to stories nor epics
 var resultCache = []; // all issues as returned by JIRA REST API
-var gitHistoryIndex = {} // all git history
+var gitHistoryIndex = {}; // all git history
 
 /* get some data from json objects returned by JIRA REST API */
 function buildIssueKey(issue) {	return issue.key + ': ' + issue.fields.summary; }
@@ -31,7 +29,7 @@ function getStatus(issue) { return issue.fields.status.name; }
 function getEpicLink(issue) { return issue.fields.customfield_12821; }
 function getSummary(issue) { return issue.fields.summary; }
 function isEpic(issue) { return "Epic" == getType(issue) }
-function isStory(issue) { return "Story" == getType(issue)	}
+function isStory(issue) { return "Story" == getType(issue)}
 function isTask(issue) {
 	return ("Task" == getType(issue)) || ("Technical Task" == getType(issue));
 }
@@ -60,7 +58,8 @@ async function findAndCacheIssue(issueKey) {
 
 async function getParentIssue(issue) {
 	if (issue.fields.parent) {
-		if (!resultCache[issue.fields.parent.key]) { // parent may have been filtered out by the jira query
+		if (!resultCache[issue.fields.parent.key]) {
+			// parent may have been left out by the intital jira query. Fetch it
 			await findAndCacheIssue(issue.fields.parent.key)
 		}
 		return resultCache[issue.fields.parent.key]
@@ -74,8 +73,8 @@ async function addEpic(epicLink) {
 	try {
 		if (!epics[epicLink]) {
 			epics[epicLink] = new Object();	// let add a placeholder just in case
-			// epic may have been filtered out by the jira query
-			const epic = await findAndCacheIssue(epicLink)
+			// epic may have been left out by the jira query. Fetch it
+			const epic = await findAndCacheIssue(epicLink);
 			epics[epicLink] = convert(epic)
 		}
 	}
@@ -86,10 +85,10 @@ async function addEpic(epicLink) {
 }
 
 async function addStory(issue) {
-	epicLink = getEpicLink(issue)
+	epicLink = getEpicLink(issue);
 	if (epicLink) {
 		//console.log("  story " + issue.key + " has epic")	
-		epic = await addEpic(epicLink)
+		epic = await addEpic(epicLink);
 		if (!epic[issue.key]) {
 			epic[issue.key] = convert(issue)
 		}
@@ -104,12 +103,12 @@ async function addStory(issue) {
 }
 
 async function addTask(issue) {
-	//console.log("Adding task " + issue.key)	
-	parent = await getParentIssue(issue)
+	//console.log("Adding task " + issue.key)
+	parent = await getParentIssue(issue);
 	if (parent) {
-		//console.log("   task " + issue.key + " has parent")	
+		//console.log("   task " + issue.key + " has parent")
 		if (isStory(parent)) {
-			story = await addStory(parent)
+			story = await addStory(parent);
 			if (!story[issue.key]) {
 				story[issue.key] = convert(issue);
 			}
@@ -123,14 +122,15 @@ async function addTask(issue) {
 			return task[issue.key]
 		}
 		else {
-			console.log(issue.key + " has a parent which is neither a story nor a task")
+			console.log(issue.key + " has a parent which is neither a story nor a task");
 			return null;
 		}
 	}
 	else {
-		epicLink = getEpicLink(issue)
+		// noinspection JSUndeclaredVariable
+		epicLink = getEpicLink(issue);
 		if (epicLink) {
-			epic = await addEpic(epicLink)
+			epic = await addEpic(epicLink);
 			if (!epic[issue.key]) {
 				epic[issue.key] = convert(issue)
 			}
@@ -163,12 +163,12 @@ async function addIssue(issue) {
 }
 
 function cacheGitHistory(){
-	filterOptions = "| sed 's/.*/\\U&/' | sort | uniq | grep -v SUBREPO:IGNORE | grep -v ARTIFACT:IGNORE | grep -v \"RECORD REFERENCE TO LIFERAY-PORTAL\""
-	commitRange = jiraProps.get('branch.ref.from') + ".." + jiraProps.get('branch.ref.to')
+	filterOptions = "| sed 's/.*/\\U&/' | sort | uniq | grep -v SUBREPO:IGNORE | grep -v ARTIFACT:IGNORE | grep -v \"RECORD REFERENCE TO LIFERAY-PORTAL\"";
+	commitRange = jiraProps.get('branch.ref.from') + ".." + jiraProps.get('branch.ref.to');
 	command = "git log --format=%s " + commitRange + filterOptions;
 	try {
 		stdout = exec(command);
-		outArray = stdout.toString().split("\n")
+		outArray = stdout.toString().split("\n");
 
 		for (const line of outArray) {
 			trimmed=line.trim();
@@ -207,7 +207,7 @@ function logCSVLine(csvLine) {
 }
 
 function buildCSVLine(issueKey, issue, epicRendered, epicKey, epic) {
-	epicLine = "none"
+	epicLine = "none";
 	if (epicKey && epic) {
 		epicLine = epicRendered ? "" : (epicKey + ": " + sanitize(getSummary(epic)));
 	}
@@ -225,9 +225,8 @@ function buildCSVLine(issueKey, issue, epicRendered, epicKey, epic) {
 	};
 }
 
-
 function printCSV(data) {
-	epics = data["EPICS"]
+	epics = data["EPICS"];
 
 	console.log("Epic\tElement/Feaure\tLPS\tStatus\tSubtasks");
 	for (epicKey in epics) {
@@ -260,9 +259,9 @@ async function getTickets() {
 	try {
 		console.log("Querying JIRA: " + jiraProps.get('jira.query'));
 		const issues = await jira.searchJira(
-				jiraProps.get('jira.query'), {maxResults: 500})
+				jiraProps.get('jira.query'), {maxResults: 500});
 
-		console.log("Caching " + issues.issues.length + " issues")
+		console.log("Caching " + issues.issues.length + " issues");
 		for (let index = 0; index < issues.issues.length; index++) {
 			cacheIssue(issues.issues[index])
 		}
@@ -275,12 +274,12 @@ async function getTickets() {
 			cacheGitHistory();
 			if (jiraProps.get('branch.sync')) {
 				console.log("Checking out " +
-							jiraProps.get('branch.name.' + branch))
+							jiraProps.get('branch.name.' + branch));
 				await exec("git checkout " +
-						   jiraProps.get('branch.name.' + branch))
+						   jiraProps.get('branch.name.' + branch));
 				console.log(
 						"Pulling " + jiraProps.get('branch.name.' + branch) +
-						" from upstream")
+						" from upstream");
 				await exec("git pull upstream " +
 						   jiraProps.get('branch.name.' + branch))
 			}
@@ -289,23 +288,23 @@ async function getTickets() {
 		console.log("Building feature tree from git history");
 		issueCount = 0;
 		for (let index = 0; index < issues.issues.length; index++) {
-			char = '·'
+			char = '·';
 			if (isTicketinCachedHistory(issues.issues[index])) {
-				char = "*"
+				char = "*";
 				issueCount++;
 				await addIssue(issues.issues[index])
 			}
 			process.stdout.write(char)
 		}
-		console.log()
+		console.log();
 		console.log(issueCount + " out of " + issues.issues.length +
-						" issues were found in git")
+						" issues were found in git");
 
 		var all = new Object();
 		all["EPICS"]=epics;
 		all["STORIES W/O EPIC"]=stories;
 		all["TASKS W/O STORY"]=tasks;
-		process.chdir(process.env.PWD)
+		process.chdir(process.env.PWD);
 		return all;
 	}
 	catch (err) {
@@ -316,15 +315,13 @@ async function getTickets() {
 async function run() {
 	try {
 		var tickets = await getTickets();
-		printJSON(tickets)
+		printJSON(tickets);
 		printCSV(tickets)
 	}
 	catch (err) {
 		console.log(err);
 	}
 }
-
-//mod.testmod()
 
 run();
 
