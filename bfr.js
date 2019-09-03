@@ -85,41 +85,32 @@ async function addEpic(epicLink) {
 }
 
 async function addStory(issue) {
+	var placeholder = null;
 	epicLink = getEpicLink(issue);
 	if (epicLink) {
 		//console.log("  story " + issue.key + " has epic")	
-		epic = await addEpic(epicLink);
-		if (!epic[issue.key]) {
-			epic[issue.key] = convert(issue)
-		}
-		return epic[issue.key]
+		placeholder = await addEpic(epicLink);
 	}
 	else {
-		if (!stories[issue.key]) {
-			stories[issue.key] = convert(issue)
-		}
-		return stories[issue.key]
+		placeholder = stories;
 	}
+	if (!placeholder[issue.key]) {
+		placeholder[issue.key] = convert(issue)
+	}
+	return placeholder[issue.key]
 }
 
 async function addTask(issue) {
 	//console.log("Adding task " + issue.key)
+	var placeholder = null;
 	parent = await getParentIssue(issue);
 	if (parent) {
 		//console.log("   task " + issue.key + " has parent")
 		if (isStory(parent)) {
-			story = await addStory(parent);
-			if (!story[issue.key]) {
-				story[issue.key] = convert(issue);
-			}
-			return story[issue.key]
+			placeholder = await addStory(parent);
 		}
 		else if (isTask(parent)) {
-			task = await addTask(parent);
-			if (!task[issue.key]) {
-				task[issue.key] = convert(issue)
-			}
-			return task[issue.key]
+			placeholder = await addTask(parent);
 		}
 		else {
 			console.log(issue.key + " has a parent which is neither a story nor a task");
@@ -129,19 +120,16 @@ async function addTask(issue) {
 	else {
 		epicLink = getEpicLink(issue);
 		if (epicLink) {
-			epic = await addEpic(epicLink);
-			if (!epic[issue.key]) {
-				epic[issue.key] = convert(issue)
-			}
-			return epic[issue.key]
+			placeholder = await addEpic(epicLink);
 		}
 		else {
-			if (!tasks[issue.key]) {
-				tasks[issue.key] = convert(issue)
-			}
-			return tasks[issue.key]
+			placeholder = tasks;
 		}
 	}
+	if (!placeholder[issue.key]) {
+		placeholder[issue.key] = convert(issue)
+	}
+	return placeholder[issue.key]
 }
 
 async function addIssue(issue) {
