@@ -296,22 +296,33 @@ function printCSV(filename) {
 	try {
 		fd = fs.openSync(filename, 'a');
 		fs.appendFileSync(fd, "Epic\tFeature\tLPS\tSubtasks\n");
-		for (epicKey in features.epics) {
+		epicKeys = Object.keys(features.epics).sort();
+		for (epicIndex in epicKeys) {
+			epicKey = epicKeys[epicIndex];
+			if (!features.epics.hasOwnProperty(epicKey)) continue;
 			epic = features.epics[epicKey];
 			epicRendered = false;
-			for (issueKey in epic) {
-				if (issueKey == "fields") { continue; }
+			issueKeys = Object.keys(epic).sort();
+			for (issueIndex in issueKeys) {
+				issueKey = issueKeys[issueIndex]
+				if ((issueKey == "fields") || !epic.hasOwnProperty(issueKey)) continue;
 				issue = epic[issueKey];
 				logCSVLine(fd, buildCSVLine(issueKey, issue, epicRendered, epicKey, epic));
 				epicRendered = true;
 			}
 		}
 
-		for (storyKey in features.stories) {
+		storyKeys = Object.keys(features.stories).sort();
+		for (storyIndex in storyKeys) {
+			storyKey = storyKeys[storyIndex];
+			if (!features.stories.hasOwnProperty(storyKey)) continue;
 			logCSVLine(fd, buildCSVLine(storyKey, features.stories[storyKey]));
 		}
 
-		for (taskKey in features.tasks) {
+		taskKeys = Object.keys(features.tasks).sort();
+		for (taskIndex in taskKeys) {
+			taskKey = taskKeys[taskIndex];
+			if (!features.tasks.hasOwnProperty(taskKey)) continue;
 			logCSVLine(fd, buildCSVLine(taskKey, features.tasks[taskKey]));
 		}
 
