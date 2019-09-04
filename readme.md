@@ -1,11 +1,14 @@
 # Branch Feature Reporter
 
-This script reports features for which there are commits in the given commit range and which match with a JIRA filter. 
+Given a JIRA query and a commit range in a branch, this script reports features (epics/stories) 
+ which have commits within the commit range, represented by tickets returned by the query 
 It works as follows:
 * JIRA query is run
 * Branch is inspected to find traces of each ticket returned by the query
-* If ticket is found, it's added to the report
+* If ticket is found, it's added to the report, together with the "parent" feature (if it exists)
 * Features are hierarchically grouped by Epic/Story/Task levels using JIRA information.
+
+As a result, if a technical task returned by the JIRA query has commits in the range, the corresponding story and epic (if exists) will be added to the report.
 
 Report is given in JSON and CSV formats. A few, essential information is added to each ticket such as summary, type and status.
 
