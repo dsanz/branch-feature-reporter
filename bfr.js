@@ -3,6 +3,7 @@ const util = require('util');
 const process = require('process');
 const exec = require('child_process').execSync;
 const PropertiesReader = require('properties-reader');
+const fs = require('fs');
 
 const jiraProps = PropertiesReader('jira.properties');
 
@@ -188,10 +189,10 @@ function isTicketinCachedHistory(issue) {
 	return false;
 }
 
-function logCSVLine(csvLine) {
-	console.log(Object.keys(csvLine).reduce( (total, k, i, a) => {
+function logCSVLine(fd, csvLine) {
+	fs.appendFileSync(fd, Object.keys(csvLine).reduce( (total, k, i, a) => {
 		return total + csvLine[k] + ((i == a.length -1 ) ? "" : "\t");
-	}, ""));
+	}, "") + "\n");
 }
 
 function buildCSVLine(issueKey, issue, epicRendered, epicKey, epic) {
@@ -213,30 +214,50 @@ function buildCSVLine(issueKey, issue, epicRendered, epicKey, epic) {
 	};
 }
 
-function printCSV(data) {
-	console.log("Epic\tElement/Feaure\tLPS\tStatus\tSubtasks");
-	for (epicKey in features.epics) {
-		epic = features.epics[epicKey];
-		epicRendered = false;
-		for (issueKey in epic) {
-			if (issueKey == "fields") { continue; }
-			issue = epic[issueKey];
-			logCSVLine(buildCSVLine(issueKey, issue, epicRendered, epicKey, epic));
-			epicRendered = true;
+function printCSV() {
+	let fd;
+
+	try {
+		fd = fs.openSync('report.csv', 'a');
+		fs.appendFileSync(fd, "Epic\tElement/Feaure\tLPS\tStatus\tSubtasks");
+		for (epicKey in features.epics) {
+			epic = features.epics[epicKey];
+			epicRendered = false;
+			for (issueKey in epic) {
+				if (issueKey == "fields") { continue; }
+				issue = epic[issueKey];
+				logCSVLine(fd, buildCSVLine(issueKey, issue, epicRendered, epicKey, epic));
+				epicRendered = true;
+			}
 		}
-	}
 
-	for (storyKey in features.stories) {
-		logCSVLine(buildCSVLine(storyKey, features.stories[storyKey]));
-	}
+		for (storyKey in features.stories) {
+			logCSVLine(fd, buildCSVLine(storyKey, features.stories[storyKey]));
+		}
 
-	for (taskKey in features.tasks) {
-		logCSVLine(buildCSVLine(taskKey, features.tasks[taskKey]));
+		for (taskKey in features.tasks) {
+			logCSVLine(fd, buildCSVLine(taskKey, features.tasks[taskKey]));
+		}
+
+	} catch (err) {
+		console.log(err)
+	} finally {
+		if (fd !== undefined) fs.closeSync(fd);
 	}
 }
 
 function printJSON() {
-	console.log(util.inspect(features, {showHidden: false, depth:null, colors:true, sorted:true, compact:false, breakLength:Infinity}));
+	let fd;
+
+	try {
+		fd = fs.openSync('report.json', 'a');
+		fs.appendFileSync(fd, util.inspect(features, {showHidden: false, depth:null, sorted:true, compact:false, breakLength:Infinity}) + "\n", 'utf8');
+	} catch (err) {
+		console.log(err)
+	} finally {
+		if (fd !== undefined) fs.closeSync(fd);
+	}
+	//console.log(util.inspect(features, {showHidden: false, depth:null, colors:true, sorted:true, compact:false, breakLength:Infinity}));
 }
 
 async function getTickets() {
