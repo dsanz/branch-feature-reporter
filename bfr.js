@@ -21,6 +21,10 @@ var features = {}; // hierarchical grouping of epics, stories, tasks and subtask
 var resultCache = []; // all issues as returned by JIRA REST API
 var gitHistoryIndex = {}; // all git history
 
+/*
+ * Feature tree building
+ */
+
 /* get some data from json objects returned by JIRA REST API */
 function buildIssueKey(issue) {	return issue.key + ': ' + issue.fields.summary; }
 function getType(issue) { return issue.fields.issuetype.name;}
@@ -148,6 +152,52 @@ async function addIssue(issue) {
 	}
 }
 
+function resetFeatureTree() {
+	features.epics={};   // tree of epics → stories → tasks → subtasks
+	features.stories={}; // tree of stories → tasks → subtasks (stories w/o associated epic)
+	features.tasks={};   // tree of tasks → subtasks (tech tasks not associated to stories nor epics)
+}
+
+async function buildFeatureTree(profile) {
+	try {
+		query = jiraProps.get('jira.query.' + profile);
+		console.log(profile + " →  querying JIRA: " + query);
+		const issues = await jira.searchJira(query, {maxResults: 500});
+
+		console.log("Caching " + issues.issues.length + " issues");
+		for (let index = 0; index < issues.issues.length; index++) {
+			// can we cache issues from different profiles in the same data structure? Yes, if:
+			//  1. we then check against just the ones returned by the last query
+			//  2. we clean the features objecton each iteration
+			cacheIssue(issues.issues[index])
+		}
+
+		console.log(profile + " →  Building feature tree from git history");
+		resetFeatureTree();
+		issueCount = 0;
+		for (let index = 0; index < issues.issues.length; index++) {
+			char = '·';
+			if (isTicketinCachedHistory(issues.issues[index])) {
+				char = "*";
+				issueCount++;
+				await addIssue(issues.issues[index])
+			}
+			process.stdout.write(char)
+		}
+		console.log();
+		console.log(profile + " →  " + issueCount + " out of " + issues.issues.length +
+						" issues were found in git");
+
+		process.chdir(process.env.PWD);
+	}
+	catch (err) {
+		console.log(err);
+	}
+}
+
+/*
+ * Git history: caching and checking
+ */
 function cacheGitHistory(){
 	filterOptions = "| sed 's/.*/\\U&/' | sort | uniq | grep -v SUBREPO:IGNORE | grep -v ARTIFACT:IGNORE | grep -v \"RECORD REFERENCE TO LIFERAY-PORTAL\"";
 	commitRange = jiraProps.get('branch.ref.from') + ".." + jiraProps.get('branch.ref.to');
@@ -207,49 +257,9 @@ async function readGitBranches() {
 	}
 }
 
-function resetFeatureTree() {
-	features.epics={};   // tree of epics → stories → tasks → subtasks
-	features.stories={}; // tree of stories → tasks → subtasks (stories w/o associated epic)
-	features.tasks={};   // tree of tasks → subtasks (tech tasks not associated to stories nor epics)
-}
-
-async function buildFeatureTree(profile) {
-	try {
-		query = jiraProps.get('jira.query.' + profile);
-		console.log(profile + " →  querying JIRA: " + query);
-		const issues = await jira.searchJira(query, {maxResults: 500});
-
-		console.log("Caching " + issues.issues.length + " issues");
-		for (let index = 0; index < issues.issues.length; index++) {
-			// can we cache issues from different profiles in the same data structure? Yes, if:
-			//  1. we then check against just the ones returned by the last query
-			//  2. we clean the features objecton each iteration
-			cacheIssue(issues.issues[index])
-		}
-
-		console.log(profile + " →  Building feature tree from git history");
-		resetFeatureTree();
-		issueCount = 0;
-		for (let index = 0; index < issues.issues.length; index++) {
-			char = '·';
-			if (isTicketinCachedHistory(issues.issues[index])) {
-				char = "*";
-				issueCount++;
-				await addIssue(issues.issues[index])
-			}
-			process.stdout.write(char)
-		}
-		console.log();
-		console.log(profile + " →  " + issueCount + " out of " + issues.issues.length +
-						" issues were found in git");
-
-		process.chdir(process.env.PWD);
-	}
-	catch (err) {
-		console.log(err);
-	}
-}
-
+/*
+ * Reporting
+ */
 function logCSVLine(fd, csvLine) {
 	fs.appendFileSync(fd, Object.keys(csvLine).reduce( (total, k, i, a) => {
 		return total + csvLine[k] + ((i == a.length -1 ) ? "" : "\t");
