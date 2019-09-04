@@ -259,6 +259,26 @@ function printJSON() {
 	}
 	//console.log(util.inspect(features, {showHidden: false, depth:null, colors:true, sorted:true, compact:false, breakLength:Infinity}));
 }
+async function readGitBranches() {
+	for (const branch of ["public", "private"]) {
+		console.log("Reading git history from " + jiraProps.get('branch.name.' + branch) +
+					"@" + jiraProps.get('branch.dir.' + branch));
+
+		process.chdir(jiraProps.get('branch.dir.' + branch));
+		cacheGitHistory();
+		if (jiraProps.get('branch.sync')) {
+			console.log("Checking out " +
+						jiraProps.get('branch.name.' + branch));
+			await exec("git checkout " +
+					   jiraProps.get('branch.name.' + branch));
+			console.log(
+					"Pulling " + jiraProps.get('branch.name.' + branch) +
+					" from upstream");
+			await exec("git pull upstream " +
+					   jiraProps.get('branch.name.' + branch))
+		}
+	}
+}
 
 async function getTickets() {
 	try {
@@ -269,25 +289,6 @@ async function getTickets() {
 		console.log("Caching " + issues.issues.length + " issues");
 		for (let index = 0; index < issues.issues.length; index++) {
 			cacheIssue(issues.issues[index])
-		}
-
-		for (const branch of ["public", "private"]) {
-			console.log("Processing " + jiraProps.get('branch.name.' + branch) +
-						"@" + jiraProps.get('branch.dir.' + branch));
-
-			process.chdir(jiraProps.get('branch.dir.' + branch));
-			cacheGitHistory();
-			if (jiraProps.get('branch.sync')) {
-				console.log("Checking out " +
-							jiraProps.get('branch.name.' + branch));
-				await exec("git checkout " +
-						   jiraProps.get('branch.name.' + branch));
-				console.log(
-						"Pulling " + jiraProps.get('branch.name.' + branch) +
-						" from upstream");
-				await exec("git pull upstream " +
-						   jiraProps.get('branch.name.' + branch))
-			}
 		}
 
 		console.log("Building feature tree from git history");
@@ -314,6 +315,7 @@ async function getTickets() {
 
 async function run() {
 	try {
+		await readGitBranches();
 		await getTickets();
 		printJSON();
 		printCSV()
