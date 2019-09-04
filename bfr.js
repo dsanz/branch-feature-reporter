@@ -265,7 +265,6 @@ async function readGitBranches() {
 					"@" + jiraProps.get('branch.dir.' + branch));
 
 		process.chdir(jiraProps.get('branch.dir.' + branch));
-		cacheGitHistory();
 		if (jiraProps.get('branch.sync')) {
 			console.log("Checking out " +
 						jiraProps.get('branch.name.' + branch));
@@ -277,6 +276,7 @@ async function readGitBranches() {
 			await exec("git pull upstream " +
 					   jiraProps.get('branch.name.' + branch))
 		}
+		cacheGitHistory();
 	}
 }
 
