@@ -1,7 +1,8 @@
 # Branch Feature Reporter
 
 Given a JIRA query and a commit range in a branch, this script reports features (epics/stories) 
- which have commits within the commit range, represented by tickets returned by the query 
+ which have commits within the commit range and are returned by the query.
+  
 It works as follows:
 * JIRA query is run
 * Branch is inspected to find traces of each ticket returned by the query
