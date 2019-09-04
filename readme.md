@@ -18,7 +18,7 @@ Report is given in JSON and CSV formats. A few, essential information is added t
 Tool reads jira.properties file in the directory from where it's invoked. 
 List of properties that must be present:
 
-```
+```properties
  ###############################
  # jira
  
