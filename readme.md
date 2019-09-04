@@ -1,4 +1,4 @@
-#Branch Feature Reporter
+# Branch Feature Reporter
 
 This script reports features for which there are commits in the given commit range and which match with a JIRA filter. 
 It works as follows:
@@ -9,7 +9,7 @@ It works as follows:
 
 Report is given in JSON and CSV formats. A few, essential information is added to each ticket such as summary, type and status.
 
-##Usage
+## Usage
 ### Configuration
 Tool reads jira.properties file in the directory from where it's invoked. 
 List of properties that must be present:
@@ -18,12 +18,16 @@ List of properties that must be present:
  ###############################
  # jira
  
+ # profiles we want to use
+ profiles=echo,lima
+ 
  # server connection 
  jira.username=user.name
  jira.password=****
  
  # queries returning tickets we want to check for existence in the source history
- jira.query=filter = "Components | LPS-Lima" and status changed after "2019/05/31" and issuetype in (Task, "Technical Task", Story)
+ jira.query.echo=filter = "Components | LPS-Lima" and status changed after "2019/05/31" and issuetype in (Task, "Technical Task", Story)
+ jira.query.lima=filter = "Components | LPS-Lima" and status changed after "2019/05/31" and issuetype in (Task, "Technical Task", Story)
  
  ###############################
  # source code
