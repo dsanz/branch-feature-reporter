@@ -186,6 +186,70 @@ function isTicketinCachedHistory(issue) {
 	return false;
 }
 
+async function readGitBranches() {
+	for (const branch of ["public", "private"]) {
+		console.log("Reading git history from " + jiraProps.get('branch.name.' + branch) +
+					"@" + jiraProps.get('branch.dir.' + branch));
+
+		process.chdir(jiraProps.get('branch.dir.' + branch));
+		if (jiraProps.get('branch.sync')) {
+			console.log("Checking out " +
+						jiraProps.get('branch.name.' + branch));
+			await exec("git checkout " +
+					   jiraProps.get('branch.name.' + branch));
+			console.log(
+					"Pulling " + jiraProps.get('branch.name.' + branch) +
+					" from upstream");
+			await exec("git pull upstream " +
+					   jiraProps.get('branch.name.' + branch))
+		}
+		cacheGitHistory();
+	}
+}
+
+function resetFeatureTree() {
+	features.epics={};   // tree of epics → stories → tasks → subtasks
+	features.stories={}; // tree of stories → tasks → subtasks (stories w/o associated epic)
+	features.tasks={};   // tree of tasks → subtasks (tech tasks not associated to stories nor epics)
+}
+
+async function buildFeatureTree(profile) {
+	try {
+		query = jiraProps.get('jira.query.' + profile);
+		console.log(profile + " →  querying JIRA: " + query);
+		const issues = await jira.searchJira(query, {maxResults: 500});
+
+		console.log("Caching " + issues.issues.length + " issues");
+		for (let index = 0; index < issues.issues.length; index++) {
+			// can we cache issues from different profiles in the same data structure? Yes, if:
+			//  1. we then check against just the ones returned by the last query
+			//  2. we clean the features objecton each iteration
+			cacheIssue(issues.issues[index])
+		}
+
+		console.log(profile + " →  Building feature tree from git history");
+		resetFeatureTree();
+		issueCount = 0;
+		for (let index = 0; index < issues.issues.length; index++) {
+			char = '·';
+			if (isTicketinCachedHistory(issues.issues[index])) {
+				char = "*";
+				issueCount++;
+				await addIssue(issues.issues[index])
+			}
+			process.stdout.write(char)
+		}
+		console.log();
+		console.log(profile + " →  " + issueCount + " out of " + issues.issues.length +
+						" issues were found in git");
+
+		process.chdir(process.env.PWD);
+	}
+	catch (err) {
+		console.log(err);
+	}
+}
+
 function logCSVLine(fd, csvLine) {
 	fs.appendFileSync(fd, Object.keys(csvLine).reduce( (total, k, i, a) => {
 		return total + csvLine[k] + ((i == a.length -1 ) ? "" : "\t");
@@ -255,69 +319,6 @@ function printJSON(filename) {
 		if (fd !== undefined) fs.closeSync(fd);
 	}
 	//console.log(util.inspect(features, {showHidden: false, depth:null, colors:true, sorted:true, compact:false, breakLength:Infinity}));
-}
-async function readGitBranches() {
-	for (const branch of ["public", "private"]) {
-		console.log("Reading git history from " + jiraProps.get('branch.name.' + branch) +
-					"@" + jiraProps.get('branch.dir.' + branch));
-
-		process.chdir(jiraProps.get('branch.dir.' + branch));
-		if (jiraProps.get('branch.sync')) {
-			console.log("Checking out " +
-						jiraProps.get('branch.name.' + branch));
-			await exec("git checkout " +
-					   jiraProps.get('branch.name.' + branch));
-			console.log(
-					"Pulling " + jiraProps.get('branch.name.' + branch) +
-					" from upstream");
-			await exec("git pull upstream " +
-					   jiraProps.get('branch.name.' + branch))
-		}
-		cacheGitHistory();
-	}
-}
-
-function resetFeatureTree() {
-	features.epics={};   // tree of epics → stories → tasks → subtasks
-	features.stories={}; // tree of stories → tasks → subtasks (stories w/o associated epic)
-	features.tasks={};   // tree of tasks → subtasks (tech tasks not associated to stories nor epics)
-}
-
-async function buildFeatureTree(profile) {
-	try {
-		query = jiraProps.get('jira.query.' + profile);
-		console.log(profile + " →  querying JIRA: " + query);
-		const issues = await jira.searchJira(query, {maxResults: 500});
-
-		console.log("Caching " + issues.issues.length + " issues");
-		for (let index = 0; index < issues.issues.length; index++) {
-			// can we cache issues from different profiles in the same data structure? Yes, if:
-			//  1. we then check against just the ones returned by the last query
-			//  2. we clean the features objecton each iteration
-			cacheIssue(issues.issues[index])
-		}
-
-		console.log(profile + " →  Building feature tree from git history");
-		resetFeatureTree();
-		issueCount = 0;
-		for (let index = 0; index < issues.issues.length; index++) {
-			char = '·';
-			if (isTicketinCachedHistory(issues.issues[index])) {
-				char = "*";
-				issueCount++;
-				await addIssue(issues.issues[index])
-			}
-			process.stdout.write(char)
-		}
-		console.log();
-		console.log(profile + " →  " + issueCount + " out of " + issues.issues.length +
-						" issues were found in git");
-
-		process.chdir(process.env.PWD);
-	}
-	catch (err) {
-		console.log(err);
-	}
 }
 
 function pad(n) {
