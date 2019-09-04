@@ -57,4 +57,4 @@ List of properties that must be present:
 ### Report contents
 
 # Features to come
-Profiles to store many queries in this file. Output files saved by profile. Date/time stamps on output. Diffs between outputs
+Diffs between outputs
