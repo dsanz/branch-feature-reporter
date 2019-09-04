@@ -296,7 +296,7 @@ function printCSV(filename) {
 
 	try {
 		fd = fs.openSync(filename, 'a');
-		fs.appendFileSync(fd, "Epic\tElement/Feaure\tLPS\tStatus\tSubtasks");
+		fs.appendFileSync(fd, "Epic\tElement/Feaure\tLPS\tStatus\tSubtasks\n");
 		for (epicKey in features.epics) {
 			epic = features.epics[epicKey];
 			epicRendered = false;
