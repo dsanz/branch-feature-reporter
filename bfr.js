@@ -17,10 +17,7 @@ var jira = new JiraApi({
 	strictSSL: true
 });
 
-var features = {}; // hierarchical grouping of epics, stories, tasks and subtasks foind in git history
-features.epics={};   // tree of epics → stories → tasks → subtasks
-features.stories={}; // tree of stories → tasks → subtasks (stories w/o associated epic)
-features.tasks={};   // tree of tasks → subtasks (tech tasks not associated to stories nor epics)
+var features = {}; // hierarchical grouping of epics, stories, tasks and subtasks found in git history
 var resultCache = []; // all issues as returned by JIRA REST API
 var gitHistoryIndex = {}; // all git history
 
@@ -214,11 +211,11 @@ function buildCSVLine(issueKey, issue, epicRendered, epicKey, epic) {
 	};
 }
 
-function printCSV() {
+function printCSV(filename) {
 	let fd;
 
 	try {
-		fd = fs.openSync('report.csv', 'a');
+		fd = fs.openSync(filename, 'a');
 		fs.appendFileSync(fd, "Epic\tElement/Feaure\tLPS\tStatus\tSubtasks");
 		for (epicKey in features.epics) {
 			epic = features.epics[epicKey];
@@ -246,11 +243,11 @@ function printCSV() {
 	}
 }
 
-function printJSON() {
+function printJSON(filename) {
 	let fd;
 
 	try {
-		fd = fs.openSync('report.json', 'a');
+		fd = fs.openSync(filename, 'a');
 		fs.appendFileSync(fd, util.inspect(features, {showHidden: false, depth:null, sorted:true, compact:false, breakLength:Infinity}) + "\n", 'utf8');
 	} catch (err) {
 		console.log(err)
@@ -280,18 +277,28 @@ async function readGitBranches() {
 	}
 }
 
-async function getTickets() {
+function resetFeatureTree() {
+	features.epics={};   // tree of epics → stories → tasks → subtasks
+	features.stories={}; // tree of stories → tasks → subtasks (stories w/o associated epic)
+	features.tasks={};   // tree of tasks → subtasks (tech tasks not associated to stories nor epics)
+}
+
+async function buildFeatureTree(profile) {
 	try {
-		console.log("Querying JIRA: " + jiraProps.get('jira.query'));
-		const issues = await jira.searchJira(
-				jiraProps.get('jira.query'), {maxResults: 500});
+		query = jiraProps.get('jira.query.' + profile);
+		console.log(profile + " →  querying JIRA: " + query);
+		const issues = await jira.searchJira(query, {maxResults: 500});
 
 		console.log("Caching " + issues.issues.length + " issues");
 		for (let index = 0; index < issues.issues.length; index++) {
+			// can we cache issues from different profiles in the same data structure? Yes, if:
+			//  1. we then check against just the ones returned by the last query
+			//  2. we clean the features objecton each iteration
 			cacheIssue(issues.issues[index])
 		}
 
-		console.log("Building feature tree from git history");
+		console.log(profile + " →  Building feature tree from git history");
+		resetFeatureTree();
 		issueCount = 0;
 		for (let index = 0; index < issues.issues.length; index++) {
 			char = '·';
@@ -303,7 +310,7 @@ async function getTickets() {
 			process.stdout.write(char)
 		}
 		console.log();
-		console.log(issueCount + " out of " + issues.issues.length +
+		console.log(profile + " →  " + issueCount + " out of " + issues.issues.length +
 						" issues were found in git");
 
 		process.chdir(process.env.PWD);
@@ -313,17 +320,41 @@ async function getTickets() {
 	}
 }
 
+function pad(n) {
+    return n<10 ? '0'+n : n;
+}
+
+function getTimeStamp() {
+	let now = new Date();
+	return now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate())+"-"+pad(now.getHours())+pad(now.getMinutes())+pad(now.getSeconds())
+}
+
+function writeReport(profile) {
+	process.chdir(process.env.PWD);
+	if (!fs.existsSync("out")) {
+		fs.mkdirSync("out");
+	} 
+	timestamp = getTimeStamp();
+	filename = "out/" + profile + "_" + timestamp;
+	console.log(profile + " →  Writing report " + filename)
+	printJSON(filename + ".json");
+	printCSV(filename + ".csv");
+}
+
 async function run() {
 	try {
 		await readGitBranches();
-		await getTickets();
-		printJSON();
-		printCSV()
+
+		for (profile of jiraProps.get('profiles').split(",")) {
+			await buildFeatureTree(profile);
+			writeReport(profile);
+		}
 	}
 	catch (err) {
 		console.log(err);
 	}
 }
 
+console.log()
 run();
 
