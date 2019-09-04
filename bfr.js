@@ -116,7 +116,7 @@ async function addTask(issue) {
 			placeholder = await addTask(parent);
 		}
 		else {
-			console.log(issue.key + " has a parent which is neither a story nor a task");
+			console.error(issue.key + " has a parent which is neither a story nor a task");
 			return null;
 		}
 	}
@@ -144,7 +144,7 @@ async function addIssue(issue) {
 			await addTask(issue)
 		}
 		else {
-			console.log("Issue " + issue.key + " is neither a task or story, it should not have committed code");
+			console.error("Issue " + issue.key + " is neither a task or story, it should not have committed code");
 		}
 	}
 	catch (err) {
@@ -160,11 +160,14 @@ function resetFeatureTree() {
 
 async function buildFeatureTree(profile) {
 	try {
-		query = jiraProps.get('jira.query.' + profile);
-		console.log(profile + " →  querying JIRA: " + query);
+		profileQuery = jiraProps.get('jira.query.' + profile);
+		suffix = jiraProps.get('jira.common.query.prefix');
+
+		query = profileQuery + (suffix ? " " + suffix : "")
+		console.log("[" + profile + "] querying JIRA: " + query);
 		const issues = await jira.searchJira(query, {maxResults: 500});
 
-		console.log("Caching " + issues.issues.length + " issues");
+		console.log("[" + profile + "] Caching " + issues.issues.length + " issues");
 		for (let index = 0; index < issues.issues.length; index++) {
 			// can we cache issues from different profiles in the same data structure? Yes, if:
 			//  1. we then check against just the ones returned by the last query
@@ -172,20 +175,23 @@ async function buildFeatureTree(profile) {
 			cacheIssue(issues.issues[index])
 		}
 
-		console.log(profile + " →  Building feature tree from git history");
+		process.stdout.write("[" + profile + "] Building feature tree from git history ");
 		resetFeatureTree();
 		issueCount = 0;
+		lastPercentage = -1;
 		for (let index = 0; index < issues.issues.length; index++) {
-			char = '·';
+			percentage = Math.ceil(index * 100/ issues.issues.length)
 			if (isTicketinCachedHistory(issues.issues[index])) {
-				char = "*";
 				issueCount++;
 				await addIssue(issues.issues[index])
 			}
-			process.stdout.write(char)
+			if ((percentage !== lastPercentage) && (percentage % 5 === 0)) {
+				process.stdout.write((percentage >0 ? "..":"") +percentage + "%");
+				lastPercentage = percentage;
+			}
 		}
 		console.log();
-		console.log(profile + " →  " + issueCount + " out of " + issues.issues.length +
+		console.log("[" + profile + "] " + issueCount + " out of " + issues.issues.length +
 						" issues were found in git");
 
 		process.chdir(process.env.PWD);
@@ -237,18 +243,18 @@ function isTicketinCachedHistory(issue) {
 }
 
 async function readGitBranches() {
+	console.log("Reading git branches and caching history");
 	for (const branch of ["public", "private"]) {
-		console.log("Reading git history from " + jiraProps.get('branch.name.' + branch) +
+		console.log("  →  " + jiraProps.get('branch.name.' + branch) +
 					"@" + jiraProps.get('branch.dir.' + branch));
-
 		process.chdir(jiraProps.get('branch.dir.' + branch));
 		if (jiraProps.get('branch.sync')) {
-			console.log("Checking out " +
+			console.log("  →  Checking out " +
 						jiraProps.get('branch.name.' + branch));
 			await exec("git checkout " +
 					   jiraProps.get('branch.name.' + branch));
 			console.log(
-					"Pulling " + jiraProps.get('branch.name.' + branch) +
+					"  →  Pulling " + jiraProps.get('branch.name.' + branch) +
 					" from upstream");
 			await exec("git pull upstream " +
 					   jiraProps.get('branch.name.' + branch))
@@ -347,7 +353,7 @@ function writeReport(profile) {
 	} 
 	timestamp = getTimeStamp();
 	filename = "out/" + profile + "_" + timestamp;
-	console.log(profile + " →  Writing report " + filename)
+	console.log("[" + profile + "] Writing report " + filename)
 	printJSON(filename + ".json");
 	printCSV(filename + ".csv");
 }
@@ -355,7 +361,7 @@ function writeReport(profile) {
 async function run() {
 	try {
 		await readGitBranches();
-
+		console.log("Building report for profiles " + jiraProps.get('profiles'));
 		for (profile of jiraProps.get('profiles').split(",")) {
 			await buildFeatureTree(profile);
 			writeReport(profile);
@@ -366,6 +372,5 @@ async function run() {
 	}
 }
 
-console.log()
 run();
 
