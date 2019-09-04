@@ -280,8 +280,7 @@ function buildCSVLine(issueKey, issue, epicRendered, epicKey, epic) {
 	return {
 		"epic" : epicLine,
 		"feature" : "[" + issue.fields.type +"] → " + sanitize(issue.fields.summary) + "",
-		"LPS" : issueKey,
-		"status": issue.fields.status,
+		"LPS" : issueKey+"("+issue.fields.status+")",
 		"subtasks" : Object.keys(issue).reduce( (total, k, i, a) => {
 			if (k == "fields") {
 				return total;
@@ -296,7 +295,7 @@ function printCSV(filename) {
 
 	try {
 		fd = fs.openSync(filename, 'a');
-		fs.appendFileSync(fd, "Epic\tElement/Feaure\tLPS\tStatus\tSubtasks\n");
+		fs.appendFileSync(fd, "Epic\tFeature\tLPS\tSubtasks\n");
 		for (epicKey in features.epics) {
 			epic = features.epics[epicKey];
 			epicRendered = false;
