@@ -22,14 +22,15 @@ List of properties that must be present:
  ###############################
  # jira
  
- # profiles we want to use
- profiles=echo,lima
- 
  # server connection 
  jira.username=user.name
  jira.password=****
  
+ # profiles we want to use to generate separate reports
+ profiles=echo,lima
+ 
  # queries returning tickets we want to check for existence in the source history
+ # note how profile is used as a property suffix
  jira.query.echo=filter = "Components | LPS-Lima" and status changed after "2019/05/31" and issuetype in (Task, "Technical Task", Story)
  jira.query.lima=filter = "Components | LPS-Lima" and status changed after "2019/05/31" and issuetype in (Task, "Technical Task", Story)
  
@@ -40,12 +41,14 @@ List of properties that must be present:
  branch.dir.public=/home/dsanz/projects/72x/7.2.x
  branch.dir.private=/home/dsanz/projects/72x/7.2.x-private
  
- # do we want to sync the branch before running? which one?
+ # do we want to sync the branch before running? 
  branch.sync=true
+ 
+ # name of the branches. Script works with 2 branches to find commits both in public and private code
  branch.name.public=7.2.x
  branch.name.private=7.2.x-private
  
- # commit range to look for existence of tickets returned by query
+ # commit range to look for existence of tickets returned by query. Range must be valid in both branches
  branch.ref.from=7.2.0-ga1
  branch.ref.to=HEAD` 
 ```
