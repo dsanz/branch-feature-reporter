@@ -53,7 +53,12 @@ List of properties that must be present:
  branch.ref.to=HEAD` 
 ```
 ### Command-line invocation
-
+No need to pass parameters, just checkout the repo and run via node:
+```bash
+~/branch-feature-reporter [master]$ ls
+bfr.js  jira.properties  ...
+~/branch-feature-reporter [master]$ node bfr.js 
+```
 ### Report contents
 
 # Features to come
