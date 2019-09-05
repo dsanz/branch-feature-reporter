@@ -272,15 +272,20 @@ function logCSVLine(fd, csvLine) {
 	}, "") + "\n");
 }
 
+function buildCSVTicket(issueKey, issue, type) {
+	return (type ? ("[" + issue.fields.type +"]") : "") +
+			issueKey + " (" + issue.fields.status + ") → " + sanitize(issue.fields.summary)
+}
+
 function buildCSVLine(issueKey, issue, epicRendered, epicKey, epic) {
 	epicLine = "none";
 	if (epicKey && epic) {
-		epicLine = epicRendered ? "" : (epicKey + "("+ epic.fields.status + "): " + sanitize(epic.fields.summary));
+	//	epicLine = epicRendered ? "" : (epicKey + "("+ epic.fields.status + "): " + sanitize(epic.fields.summary));
+		epicLine = epicRendered ? "" : buildCSVTicket(epicKey, epic)
 	}
 	return {
 		"epic" : epicLine,
-		"feature" : "[" + issue.fields.type +"] → " + sanitize(issue.fields.summary) + "",
-		"LPS" : issueKey+"("+issue.fields.status+")",
+		"feature" : buildCSVTicket(issueKey, issue, issue.fields.type),
 		"subtasks" : Object.keys(issue).reduce( (total, k, i, a) => {
 			if (k == "fields") {
 				return total;
@@ -295,7 +300,7 @@ function printCSV(filename) {
 
 	try {
 		fd = fs.openSync(filename, 'a');
-		fs.appendFileSync(fd, "Epic\tFeature\tLPS\tSubtasks\n");
+		fs.appendFileSync(fd, "Epic\tFeature\tSubtasks\n");
 		epicKeys = Object.keys(features.epics).sort();
 		for (epicIndex in epicKeys) {
 			epicKey = epicKeys[epicIndex];
