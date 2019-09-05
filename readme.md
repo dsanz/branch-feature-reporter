@@ -15,7 +15,7 @@ Report is given in JSON and CSV formats. A few, essential information is added t
 
 ## Usage
 ### Configuration
-Tool reads jira.properties file in the directory from where it's invoked. 
+Tool reads `jira.properties` file in the directory from where it's invoked. 
 List of properties that must be present:
 
 ```properties
@@ -62,4 +62,5 @@ bfr.js  jira.properties  ...
 ### Report contents
 
 # Features to come
-Diffs between outputs
+* Diffs between outputs
+* Give a file filter to check story of those files rather than full repo history. This would catch features changing things that customers customize
