@@ -50,7 +50,19 @@ List of properties that must be present:
  
  # commit range to look for existence of tickets returned by query. Range must be valid in both branches
  branch.ref.from=7.2.0-ga1
- branch.ref.to=HEAD` 
+ branch.ref.to=HEAD
+
+ ###############################
+ # reporting
+ 
+ # generate report in CSV
+ csv.enabled=true
+ 
+ # include links to the tickets for the CSV to be imported in google spreadsheets
+ csv.gdoc=true
+  
+ # generate report in json
+ json.enabled=false 
 ```
 ### Command-line invocation
 No need to pass parameters, just checkout the repo and run via node:

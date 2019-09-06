@@ -272,9 +272,19 @@ function sanitize(text) {
 	return text.replace(/\t/g," ");
 }
 
+function buildTicketURL(issueKey) {
+	return "https://issues.liferay.com/browse/"+issueKey;
+}
+
 function buildCSVTicket(issueKey, issue, type) {
-	return (type ? ("[" + issue.fields.type +"] ") : "") +
-			issueKey + " (" + issue.fields.status + ") → " + sanitize(issue.fields.summary)
+	issueString = (type ? ("[" + issue.fields.type +"] ") : "") +
+				issueKey + " (" + issue.fields.status + ") → " +
+				sanitize(issue.fields.summary)
+	if (jiraProps.get('csv.gdoc')) {
+		issueString = "=HYPERLINK(\"" + buildTicketURL(issueKey) + "\",\"" +
+					  issueString.replace(/"/g, "'") + "\")"
+	}
+	return issueString;
 }
 
 function buildCSVLine(issueKey, issue, epicRendered, epicKey, epic) {
@@ -402,9 +412,14 @@ function writeReport(profile) {
 	} 
 	timestamp = getTimeStamp();
 	filename = "out/" + profile + "_" + timestamp;
-	console.log("[" + profile + "] Writing report " + filename)
-	printJSON(filename + ".json");
-	printCSV(filename + ".csv");
+	if (jiraProps.get('json.enabled')) {
+		console.log("[" + profile + "] Writing JSON report " + filename + ".json")
+		printJSON(filename + ".json");
+	}
+	if (jiraProps.get('csv.enabled')) {
+		console.log("[" + profile + "] Writing CSV report " + filename + ".csv")
+		printCSV(filename + ".csv");
+	}
 }
 
 async function run() {
