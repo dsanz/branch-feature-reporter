@@ -295,19 +295,54 @@ function buildCSVLine(issueKey, issue, epicRendered, epicKey, epic) {
 	};
 }
 
+function smartSort(object) {
+	keys = Object.keys(object)
+
+	// separate into keys per project
+	const sortedTree={}
+	for (keyIndex in keys) {
+		key = keys[keyIndex];
+		project = key.substring(0, key.indexOf("-"));
+		if (!sortedTree[project]) { sortedTree[project] = [] }
+		number = key.substring(key.indexOf("-") + 1);
+		sortedTree[project].push(number)
+	}
+
+	// sort keys within each project
+	//console.log(sortedTree);
+	for (project in sortedTree) {
+		sortedTree[project] = sortedTree[project].sort((a, b) => a - b);
+	}
+	//console.log(sortedTree);
+
+	// put everything back together into a single array of keys
+	const result = []
+	projects = Object.keys(sortedTree).sort();
+	for (projectIndex in projects) {
+		projectKey = projects[projectIndex];
+
+		for (sortedIssueKeyIndex in sortedTree[projectKey]) {
+			result.push(projectKey + "-" + sortedTree[projectKey][sortedIssueKeyIndex])
+
+		}
+	}
+//	console.log(result);
+	return result;
+}
+
 function printCSV(filename) {
 	let fd;
 
 	try {
 		fd = fs.openSync(filename, 'a');
 		fs.appendFileSync(fd, "Epic\tFeature\tSubtasks\n");
-		epicKeys = Object.keys(features.epics).sort();
+		epicKeys = smartSort(features.epics);
 		for (epicIndex in epicKeys) {
 			epicKey = epicKeys[epicIndex];
 			if (!features.epics.hasOwnProperty(epicKey)) continue;
 			epic = features.epics[epicKey];
 			epicRendered = false;
-			issueKeys = Object.keys(epic).sort();
+			issueKeys = smartSort(epic);
 			for (issueIndex in issueKeys) {
 				issueKey = issueKeys[issueIndex]
 				if ((issueKey == "fields") || !epic.hasOwnProperty(issueKey)) continue;
@@ -317,14 +352,14 @@ function printCSV(filename) {
 			}
 		}
 
-		storyKeys = Object.keys(features.stories).sort();
+		storyKeys = smartSort(features.stories);
 		for (storyIndex in storyKeys) {
 			storyKey = storyKeys[storyIndex];
 			if (!features.stories.hasOwnProperty(storyKey)) continue;
 			logCSVLine(fd, buildCSVLine(storyKey, features.stories[storyKey]));
 		}
 
-		taskKeys = Object.keys(features.tasks).sort();
+		taskKeys = smartSort(features.tasks);
 		for (taskIndex in taskKeys) {
 			taskKey = taskKeys[taskIndex];
 			if (!features.tasks.hasOwnProperty(taskKey)) continue;
