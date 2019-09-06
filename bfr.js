@@ -37,10 +37,6 @@ function isTask(issue) {
 	return ("Task" == getType(issue)) || ("Technical Task" == getType(issue));
 }
 
-function sanitize(text) {
-	return text.replace(/\t/g," ");
-}
-
 // convert a JIRA issue to the JSON representation we want for output
 function convert(issue) {
 	//key = getType(issue) + " (" + issue.fields.status.name + ") ";
@@ -272,15 +268,18 @@ function logCSVLine(fd, csvLine) {
 	}, "") + "\n");
 }
 
+function sanitize(text) {
+	return text.replace(/\t/g," ");
+}
+
 function buildCSVTicket(issueKey, issue, type) {
-	return (type ? ("[" + issue.fields.type +"]") : "") +
+	return (type ? ("[" + issue.fields.type +"] ") : "") +
 			issueKey + " (" + issue.fields.status + ") → " + sanitize(issue.fields.summary)
 }
 
 function buildCSVLine(issueKey, issue, epicRendered, epicKey, epic) {
 	epicLine = "none";
 	if (epicKey && epic) {
-	//	epicLine = epicRendered ? "" : (epicKey + "("+ epic.fields.status + "): " + sanitize(epic.fields.summary));
 		epicLine = epicRendered ? "" : buildCSVTicket(epicKey, epic)
 	}
 	return {
