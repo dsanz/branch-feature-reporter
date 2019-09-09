@@ -344,6 +344,7 @@ function printCSV(filename) {
 
 	try {
 		fd = fs.openSync(filename, 'a');
+		fs.appendFileSync(fd, "Report:\t" + filename + "\n");
 		fs.appendFileSync(fd, "Epic\tFeature\tSubtasks\n");
 		epicKeys = smartSort(features.epics);
 		for (epicIndex in epicKeys) {
