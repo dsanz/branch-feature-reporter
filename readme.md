@@ -31,8 +31,12 @@ List of properties that must be present:
  
  # queries returning tickets we want to check for existence in the source history
  # note how profile is used as a property suffix
- jira.query.echo=filter = "Components | LPS-Lima" and status changed after "2019/05/31" and issuetype in (Task, "Technical Task", Story)
- jira.query.lima=filter = "Components | LPS-Lima" and status changed after "2019/05/31" and issuetype in (Task, "Technical Task", Story)
+ jira.query.echo=filter = "Components | LPS-Lima"
+ jira.query.lima=filter = "Components | LPS-Lima"
+
+ # if present, the value of this property will be added to all profile queries
+ jira.common.query.prefix=and status changed after "2019/05/31" and issuetype in (Task, "Technical Task", Story)
+
  
  ###############################
  # source code
