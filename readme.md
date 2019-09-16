@@ -31,7 +31,7 @@ List of properties that must be present:
  
  # queries returning tickets we want to check for existence in the source history
  # note how profile is used as a property suffix
- jira.query.echo=filter = "Components | LPS-Lima"
+ jira.query.echo=filter = "Components | LPS-Echo"
  jira.query.lima=filter = "Components | LPS-Lima"
 
  # if present, the value of this property will be added to all profile queries
@@ -79,4 +79,6 @@ bfr.js  jira.properties  ...
 
 # Features to come
 * Diffs between outputs
+* Look for related documentation tickets and report status (both LPS of specific type + LRDOCS ticket)
+* Look for qa tickets, report status and linked documents
 * Give a file filter to check story of those files rather than full repo history. This would catch features changing things that customers customize
