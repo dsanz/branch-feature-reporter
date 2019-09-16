@@ -406,13 +406,15 @@ function getTimeStamp() {
 	return now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate())+"-"+pad(now.getHours())+pad(now.getMinutes())+pad(now.getSeconds())
 }
 
-function writeReport(profile) {
+function writeReport(profile, timestamp) {
 	process.chdir(process.env.PWD);
-	if (!fs.existsSync("out")) {
-		fs.mkdirSync("out");
+
+	dirname = "out/" + timestamp;
+	if (!fs.existsSync(dirname)) {
+		fs.mkdirSync(dirname);
 	} 
-	timestamp = getTimeStamp();
-	filename = "out/" + profile + "_" + timestamp;
+
+	filename = dirname + "/" + profile + "_" + timestamp;
 	if (jiraProps.get('json.enabled')) {
 		console.log("[" + profile + "] Writing JSON report " + filename + ".json")
 		printJSON(filename + ".json");
@@ -427,9 +429,10 @@ async function run() {
 	try {
 		await readGitBranches();
 		console.log("Building report for profiles " + jiraProps.get('profiles'));
+		timestamp = getTimeStamp();
 		for (profile of jiraProps.get('profiles').split(",")) {
 			await buildFeatureTree(profile);
-			writeReport(profile);
+			writeReport(profile, timestamp);
 		}
 	}
 	catch (err) {
