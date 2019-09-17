@@ -96,7 +96,7 @@ async function getParentIssue(issue) {
 
 // issue comes as the epic key as we add the epic via addStory so we just have the epic link field
 async function addEpic(epicLink) { 
-	//console.log("Adding epic " + issue)
+	//log("Adding epic " + issue)
 	try {
 		if (!features.epics[epicLink]) {
 			features.epics[epicLink] = new Object();	// let add a placeholder just in case
@@ -115,7 +115,7 @@ async function addStory(issue) {
 	var placeholder = null;
 	epicLink = getEpicLink(issue);
 	if (epicLink) {
-		//console.log("  story " + issue.key + " has epic")	
+		//log("  story " + issue.key + " has epic")	
 		placeholder = await addEpic(epicLink);
 	}
 	else {
@@ -128,11 +128,11 @@ async function addStory(issue) {
 }
 
 async function addTask(issue) {
-	//console.log("Adding task " + issue.key)
+	//log("Adding task " + issue.key)
 	var placeholder = null;
 	parent = await getParentIssue(issue);
 	if (parent) {
-		//console.log("   task " + issue.key + " has parent")
+		//log("   task " + issue.key + " has parent")
 		if (isStory(parent)) {
 			placeholder = await addStory(parent);
 		}
@@ -188,10 +188,10 @@ async function buildFeatureTree(profile) {
 		suffix = jiraProps.get('jira.common.query.prefix');
 
 		query = profileQuery + (suffix ? " " + suffix : "")
-		console.log("[" + profile + "] querying JIRA: " + query);
+		log("[" + profile + "] querying JIRA: " + query);
 		const issues = await jira.searchJira(query, {maxResults: 500});
 
-		console.log("[" + profile + "] Caching " + issues.issues.length + " issues");
+		log("[" + profile + "] Caching " + issues.issues.length + " issues");
 		for (let index = 0; index < issues.issues.length; index++) {
 			// can we cache issues from different profiles in the same data structure? Yes, if:
 			//  1. we then check against just the ones returned by the last query
@@ -214,8 +214,8 @@ async function buildFeatureTree(profile) {
 				lastPercentage = percentage;
 			}
 		}
-		console.log();
-		console.log("[" + profile + "] " + issueCount + " out of " + issues.issues.length +
+		log();
+		log("[" + profile + "] " + issueCount + " out of " + issues.issues.length +
 						" issues were found in git");
 
 		process.chdir(process.env.PWD);
@@ -267,17 +267,17 @@ function isTicketinCachedHistory(issue) {
 }
 
 async function readGitBranches() {
-	console.log("Reading git branches and caching history");
+	log("Reading git branches and caching history");
 	for (const branch of ["public", "private"]) {
-		console.log("  →  " + jiraProps.get('branch.name.' + branch) +
+		log("  →  " + jiraProps.get('branch.name.' + branch) +
 					"@" + jiraProps.get('branch.dir.' + branch));
 		process.chdir(jiraProps.get('branch.dir.' + branch));
 		if (jiraProps.get('branch.sync')) {
-			console.log("  →  Checking out " +
+			log("  →  Checking out " +
 						jiraProps.get('branch.name.' + branch));
 			await exec("git checkout " +
 					   jiraProps.get('branch.name.' + branch));
-			console.log(
+			log(
 					"  →  Pulling " + jiraProps.get('branch.name.' + branch) +
 					" from upstream");
 			await exec("git pull upstream " +
@@ -346,11 +346,11 @@ function smartSort(object) {
 	}
 
 	// sort keys within each project
-	//console.log(sortedTree);
+	//log(sortedTree);
 	for (project in sortedTree) {
 		sortedTree[project] = sortedTree[project].sort((a, b) => a - b);
 	}
-	//console.log(sortedTree);
+	//log(sortedTree);
 
 	// put everything back together into a single array of keys
 	const result = []
@@ -363,7 +363,7 @@ function smartSort(object) {
 
 		}
 	}
-//	console.log(result);
+//	log(result);
 	return result;
 }
 
@@ -422,7 +422,7 @@ function printJSON(filename) {
 	} finally {
 		if (fd !== undefined) fs.closeSync(fd);
 	}
-	//console.log(util.inspect(features, {showHidden: false, depth:null, colors:true, sorted:true, compact:false, breakLength:Infinity}));
+	//log(util.inspect(features, {showHidden: false, depth:null, colors:true, sorted:true, compact:false, breakLength:Infinity}));
 }
 
 function pad(n) {
@@ -444,11 +444,11 @@ function writeReport(profile, timestamp) {
 
 	filename = dirname + "/" + profile + "_" + timestamp;
 	if (jiraProps.get('json.enabled')) {
-		console.log("[" + profile + "] Writing JSON report " + filename + ".json")
+		log("[" + profile + "] Writing JSON report " + filename + ".json")
 		printJSON(filename + ".json");
 	}
 	if (jiraProps.get('csv.enabled')) {
-		console.log("[" + profile + "] Writing CSV report " + filename + ".csv")
+		log("[" + profile + "] Writing CSV report " + filename + ".csv")
 		printCSV(filename + ".csv");
 	}
 }
@@ -456,7 +456,7 @@ function writeReport(profile, timestamp) {
 async function run() {
 	try {
 		await readGitBranches();
-		console.log("Building report for profiles " + jiraProps.get('profiles'));
+		log("Building report for profiles " + jiraProps.get('profiles'));
 		timestamp = getTimeStamp();
 		logfile = fs.openSync(dirname = "out/" + timestamp + "/bfs.log", 'a');
 		for (profile of jiraProps.get('profiles').split(",")) {
