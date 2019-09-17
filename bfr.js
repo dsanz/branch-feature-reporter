@@ -25,8 +25,8 @@ var logfile;
 /* logging */
 function log(message, cfg) {
 	if (cfg) {
-		if (!cfg.error) { cfg.error = false }
-		if (!cfg.newline) { cfg.newline = true }
+		if (cfg.error == undefined) { cfg.error = false }
+		if (cfg.newline == undefined) { cfg.newline = true }
 	}
 	else {
 		cfg = { error:false, newline:true};
@@ -199,7 +199,7 @@ async function buildFeatureTree(profile) {
 			cacheIssue(issues.issues[index])
 		}
 
-		process.stdout.write("[" + profile + "] Building feature tree from git history ");
+		log("[" + profile + "] Building feature tree from git history ", {newline:false});
 		resetFeatureTree();
 		issueCount = 0;
 		lastPercentage = -1;
@@ -210,7 +210,7 @@ async function buildFeatureTree(profile) {
 				await addIssue(issues.issues[index])
 			}
 			if ((percentage !== lastPercentage) && (percentage % 5 === 0)) {
-				process.stdout.write((percentage >0 ? "..":"") +percentage + "%");
+				log((percentage >0 ? "..":"") +percentage + "%", {newline:false});
 				lastPercentage = percentage;
 			}
 		}
