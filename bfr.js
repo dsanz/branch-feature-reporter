@@ -20,6 +20,34 @@ var jira = new JiraApi({
 var features = {}; // hierarchical grouping of epics, stories, tasks and subtasks found in git history
 var resultCache = []; // all issues as returned by JIRA REST API
 var gitHistoryIndex = {}; // all git history
+var logfile;
+
+/* logging */
+function log(message, cfg) {
+	if (cfg) {
+		if (!cfg.error) { cfg.error = false }
+		if (!cfg.newline) { cfg.newline = true }
+	}
+	else {
+		cfg = { error:false, newline:true};
+	}
+
+	if (cfg.newline) {
+		if (cfg.error) {
+			console.error(message);
+		} else {
+			console.log(message);
+		}
+	}
+	else {
+		if (cfg.error) {
+			process.stderr.write(message);
+		} else {
+			process.stdout.write(message);
+		}
+	}
+	fs.appendFileSync(logfile, message + (cfg.newline ? "\n" : ""));
+}
 
 /*
  * Feature tree building
@@ -144,7 +172,7 @@ async function addIssue(issue) {
 		}
 	}
 	catch (err) {
-		console.log(err)
+		console.error(err)
 	}
 }
 
@@ -193,7 +221,7 @@ async function buildFeatureTree(profile) {
 		process.chdir(process.env.PWD);
 	}
 	catch (err) {
-		console.log(err);
+		console.error(err);
 	}
 }
 
@@ -220,7 +248,7 @@ function cacheGitHistory(){
 		}
 	}
 	catch(err) {
-		console.log(err)
+		console.error(err)
 	}
 }
 
@@ -377,7 +405,7 @@ function printCSV(filename) {
 		}
 
 	} catch (err) {
-		console.log(err)
+		console.error(err)
 	} finally {
 		if (fd !== undefined) fs.closeSync(fd);
 	}
@@ -390,7 +418,7 @@ function printJSON(filename) {
 		fd = fs.openSync(filename, 'a');
 		fs.appendFileSync(fd, util.inspect(features, {showHidden: false, depth:null, sorted:true, compact:false, breakLength:Infinity}) + "\n", 'utf8');
 	} catch (err) {
-		console.log(err)
+		console.error(err)
 	} finally {
 		if (fd !== undefined) fs.closeSync(fd);
 	}
@@ -430,13 +458,17 @@ async function run() {
 		await readGitBranches();
 		console.log("Building report for profiles " + jiraProps.get('profiles'));
 		timestamp = getTimeStamp();
+		logfile = fs.openSync(dirname = "out/" + timestamp + "/bfs.log", 'a');
 		for (profile of jiraProps.get('profiles').split(",")) {
 			await buildFeatureTree(profile);
 			writeReport(profile, timestamp);
 		}
 	}
 	catch (err) {
-		console.log(err);
+		console.error(err);
+	}
+	finally {
+		if (logfile !== undefined) fs.closeSync(logfile);
 	}
 }
 
