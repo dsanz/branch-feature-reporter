@@ -106,7 +106,7 @@ async function addEpic(epicLink) {
 		}
 	}
 	catch (err) {
-		console.error(err)
+		log(err, {error:true})
 	}
 	return features.epics[epicLink];
 }
@@ -140,7 +140,7 @@ async function addTask(issue) {
 			placeholder = await addTask(parent);
 		}
 		else {
-			console.error(issue.key + " has a parent which is neither a story nor a task");
+			log(issue.key + " has a parent which is neither a story nor a task", {error:true});
 			return null;
 		}
 	}
@@ -168,11 +168,11 @@ async function addIssue(issue) {
 			await addTask(issue)
 		}
 		else {
-			console.error("Issue " + issue.key + " is neither a task or story, it should not have committed code");
+			log("Issue " + issue.key + " is neither a task or story, it should not have committed code", {error:true});
 		}
 	}
 	catch (err) {
-		console.error(err)
+		log(err, {error:true})
 	}
 }
 
@@ -221,7 +221,7 @@ async function buildFeatureTree(profile) {
 		process.chdir(process.env.PWD);
 	}
 	catch (err) {
-		console.error(err);
+		log(err, {error:true});
 	}
 }
 
@@ -248,7 +248,7 @@ function cacheGitHistory(){
 		}
 	}
 	catch(err) {
-		console.error(err)
+		log(err, {error:true})
 	}
 }
 
@@ -405,7 +405,7 @@ function printCSV(filename) {
 		}
 
 	} catch (err) {
-		console.error(err)
+		log(err, {error:true})
 	} finally {
 		if (fd !== undefined) fs.closeSync(fd);
 	}
@@ -418,7 +418,7 @@ function printJSON(filename) {
 		fd = fs.openSync(filename, 'a');
 		fs.appendFileSync(fd, util.inspect(features, {showHidden: false, depth:null, sorted:true, compact:false, breakLength:Infinity}) + "\n", 'utf8');
 	} catch (err) {
-		console.error(err)
+		log(err, {error:true})
 	} finally {
 		if (fd !== undefined) fs.closeSync(fd);
 	}
@@ -465,7 +465,7 @@ async function run() {
 		}
 	}
 	catch (err) {
-		console.error(err);
+		log(err, {error:true});
 	}
 	finally {
 		if (logfile !== undefined) fs.closeSync(logfile);
