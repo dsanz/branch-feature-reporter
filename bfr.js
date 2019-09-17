@@ -20,7 +20,11 @@ var jira = new JiraApi({
 var features = {}; // hierarchical grouping of epics, stories, tasks and subtasks found in git history
 var resultCache = []; // all issues as returned by JIRA REST API
 var gitHistoryIndex = {}; // all git history
+
+// output related stuff
 var logfile;
+var timestamp = getTimeStamp();
+var dirname = "out/" + timestamp;
 
 /* logging */
 function log(message, cfg) {
@@ -434,13 +438,8 @@ function getTimeStamp() {
 	return now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate())+"-"+pad(now.getHours())+pad(now.getMinutes())+pad(now.getSeconds())
 }
 
-function writeReport(profile, timestamp) {
+function writeReport(profile) {
 	process.chdir(process.env.PWD);
-
-	dirname = "out/" + timestamp;
-	if (!fs.existsSync(dirname)) {
-		fs.mkdirSync(dirname);
-	} 
 
 	filename = dirname + "/" + profile + "_" + timestamp;
 	if (jiraProps.get('json.enabled')) {
@@ -453,15 +452,21 @@ function writeReport(profile, timestamp) {
 	}
 }
 
+function prepareLog() {
+	if (!fs.existsSync(dirname)) {
+		fs.mkdirSync(dirname);
+	}
+	logfile = fs.openSync(dirname + "/bfs.log", 'a');
+}
+
 async function run() {
 	try {
+		prepareLog();
 		await readGitBranches();
 		log("Building report for profiles " + jiraProps.get('profiles'));
-		timestamp = getTimeStamp();
-		logfile = fs.openSync(dirname = "out/" + timestamp + "/bfs.log", 'a');
 		for (profile of jiraProps.get('profiles').split(",")) {
 			await buildFeatureTree(profile);
-			writeReport(profile, timestamp);
+			writeReport(profile);
 		}
 	}
 	catch (err) {
