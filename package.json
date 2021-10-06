@@ -1,0 +1,8 @@
+{
+	"dependencies": {
+		"jira-client": "6.22.0",
+		"properties-reader": "2.2.0"
+	},
+	"name": "bfr",
+	"version": "1.0.0"
+}
